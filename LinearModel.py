@@ -23,6 +23,7 @@ def each_lasso_model(Xtrain, Ytrain):
     model = linear_model.LassoCV(alphas=[0.00001, 0.00002, 0.00004, 0.00006, 0.00008, 0.0001],
                                  max_iter=10000, fit_intercept=False, normalize=False)
     model.fit(Xtrain, Ytrain)
+    print(model.alpha_)
     return model
 
 def each_rf_model(Xtrain, Ytrain):
@@ -41,10 +42,10 @@ def each_xgb_model(Xtrain, Ytrain):
 
 if __name__ == '__main__':
     prepro = PreProcess()
-    cand_list = prepro.select_neareat()
+    cand_list = prepro.select_nearest()
     Ysubmit = []
     mse_mat = []
-    for predictday in [14]:
+    for predictday in [14, 17, 20]:
         Xtrain, Ytrain, Xdev, Ydev, Xtest = prepro.readdata(predictday)
         mse_station = []
         Vy = []
@@ -56,7 +57,7 @@ if __name__ == '__main__':
             Xdev0, Ydev0 = Xdev[:, cand_list[i], :].reshape(Xdev.shape[0], -1), Ydev[:, i]
             Xtest0 = Xtest[:, cand_list[i], :].reshape(Xtest.shape[0], -1)
 
-            model = each_lasso_model(Xtrain0, Ytrain0)
+            model = each_linear_model(Xtrain0, Ytrain0)
             Yhat.append(model.predict(Xdev0))
             Vy.append(model.predict(Xtest0))
 
@@ -70,7 +71,8 @@ if __name__ == '__main__':
         print('每个站点的mse为:')
         print(mse_station)
         Ysubmit.append(np.array(Vy))
-
+    mse_mat = np.array(mse_mat)
+    print('>>>拟合所有模型完成！validation_mse: %f'%np.mean(mse_mat))
     # mse_mat = pd.DataFrame(np.array(mse_mat).transpose(), columns=('3', '6', '9'))
     # mse_mat.index = list(range(228))
     # mse_mat = mse_mat.round(2)

@@ -10,6 +10,8 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 Model_dir = 'tnnModel/'
+if not os.path.exists(Model_dir):
+    os.mkdir(Model_dir)
 mse_file = 'tnn_mse.csv'
 class TrafficNN():
     def __init__(self):
@@ -37,13 +39,15 @@ class TrafficNN():
         Dense = tf.layers.dense(Dense, self.input_dim)
         Dense = tf.nn.sigmoid(Dense)
         if self.dense_num == 2:
-            Dense = tf.layers.dense(Dense, self.input_dim//2)
+            Dense = tf.layers.dense(Dense, 20)
             Dense = tf.nn.sigmoid(Dense)
-        self.y_pred = tf.layers.dense(Dense, 1, kernel_regularizer=tf.contrib.layers.l1_regularizer(1e-4))
+            Dense = tf.layers.dense(Dense, 10)
+            Dense = tf.nn.sigmoid(Dense)
+        self.y_pred = tf.layers.dense(Dense, 1, kernel_regularizer=tf.contrib.layers.l1_regularizer(1e-6))
 
         reg_losses = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         self.loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))\
-                    +reg_losses+1e-5*tf.nn.l2_loss(A_matrix)
+                    +reg_losses
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         self.train_op = optimizer.minimize(self.loss)
 
@@ -108,9 +112,10 @@ class TrafficNN():
 
 
 if __name__ == '__main__':
+    submit = False
     tnn = TrafficNN()
     preprocess = PreProcess()
-    cand_list = preprocess.select_neareat()
+    cand_list = preprocess.select_nearest()
     # 保存要提交的结果
     Ysubmit = []
     # 保存所有模型的mse
@@ -160,16 +165,17 @@ if __name__ == '__main__':
     mse_mat = mse_mat.round(2)
     mse_mat.to_csv(mse_file, header=True, index=True)
 
-    # 生成提交的csv文件
-    # Ysubmit = preprocess.data_inv_tf(np.array(Ysubmit))
-    # res = pd.DataFrame(columns=['Id', 'Expected'])
-    # timepoint = [15, 30, 45]
-    # for d in range(80):
-    #     for t in range(3):
-    #         for i in range(228):
-    #             res = res.append({'Id': '%i_%i_%i' % (d, timepoint[t], i), 'Expected': Ysubmit[t, i, d]},
-    #                              ignore_index=True)
-    # res.to_csv('prediction.csv', header=True, index=False)
+    if submit:
+        # 生成提交的csv文件
+        Ysubmit = preprocess.data_inv_tf(np.array(Ysubmit))
+        res = pd.DataFrame(columns=['Id', 'Expected'])
+        timepoint = [15, 30, 45]
+        for d in range(80):
+            for t in range(3):
+                for i in range(228):
+                    res = res.append({'Id': '%i_%i_%i' % (d, timepoint[t], i), 'Expected': Ysubmit[t, i, d]},
+                                     ignore_index=True)
+        res.to_csv('prediction.csv', header=True, index=False)
 
 
 
