@@ -38,10 +38,10 @@ class PreProcess():
         # 随机选取一部分作为验证集
         shuffle_index = np.array(list(range(X.shape[0])))
         np.random.shuffle(shuffle_index)
-        n_train = int(X.shape[0] * 0.9)
-        Xtrain, Ytrain = X[:n_train], Y[:n_train]
+        n_train = int(X.shape[0] * 0.85)
+        Xtrain, Ytrain = X[shuffle_index[:n_train]], Y[shuffle_index[:n_train]]
         print('训练数据shape', Xtrain.shape, Ytrain.shape)
-        Xdev, Ydev = X[n_train:], Y[n_train:]
+        Xdev, Ydev = X[shuffle_index[n_train:]], Y[shuffle_index[n_train:]]
         print('验证数据shape', Xdev.shape, Ydev.shape)
 
         # 读取test数据集，用来之后提交预测

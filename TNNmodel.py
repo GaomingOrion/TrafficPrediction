@@ -29,25 +29,24 @@ class TrafficNN():
         self.X_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, self.time_step))
         self.y_ph = tf.placeholder(tf.float32, shape=(None,))
         A_matrix = tf.get_variable('A_matrix', shape=[self.input_dim, self.time_step, self.time_step])
+        A_matrix_fro = tf.norm(A_matrix, ord='fro', axis=(1, 2))
         X_left = tf.gather(self.X_ph, [0]*self.input_dim, axis=1)
         X_left = tf.reshape(X_left, shape=(-1, self.input_dim, 1, self.time_step))
         X_right = tf.reshape(self.X_ph, shape=(-1, self.input_dim, self.time_step, 1))
 
         Dense = tf.reshape(tf.einsum('ntij,tjk,ntkl->ntil', X_left, A_matrix, X_right),
                               shape=(-1, self.input_dim))
-        Dense = tf.nn.sigmoid(Dense)
-        Dense = tf.layers.dense(Dense, self.input_dim)
-        Dense = tf.nn.sigmoid(Dense)
-        if self.dense_num == 2:
-            Dense = tf.layers.dense(Dense, 20)
-            Dense = tf.nn.sigmoid(Dense)
-            Dense = tf.layers.dense(Dense, 10)
-            Dense = tf.nn.sigmoid(Dense)
-        self.y_pred = tf.layers.dense(Dense, 1, kernel_regularizer=tf.contrib.layers.l1_regularizer(1e-6))
+        Dense = tf.div(Dense, A_matrix_fro)
+        Dense = tf.nn.tanh(Dense)
+        Dense = tf.layers.dense(Dense, int(0.7*self.input_dim), kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0))
+        Dense = tf.nn.tanh(Dense)
+        Dense = tf.layers.dense(Dense, int(0.5*self.input_dim), kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0))
+        Dense = tf.nn.tanh(Dense)
+        self.y_pred = tf.layers.dense(Dense, 1, kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0))
 
         reg_losses = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         self.loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))\
-                    +reg_losses
+                    +1e-4*reg_losses#+1e-4*tf.reduce_sum(tf.square(A_matrix))
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         self.train_op = optimizer.minimize(self.loss)
 
