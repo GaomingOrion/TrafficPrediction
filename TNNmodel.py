@@ -16,7 +16,7 @@ mse_file = 'tnn_mse.csv'
 class TrafficNN():
     def __init__(self):
         self.batchsize = 32
-        self.epoches = 100
+        self.epochs = 100
         self.time_step = 12
         # will change
         self.input_dim = 0
@@ -87,7 +87,7 @@ class TrafficNN():
                 sess.run(tf.global_variables_initializer())
 
             low = 0
-            for epoch in range(1, self.epoches+1):
+            for epoch in range(1, self.epochs+1):
                 shuffle_idx = list(range(Xtrain.shape[0]))
                 np.random.shuffle(shuffle_idx)
                 while True:
@@ -142,7 +142,7 @@ if __name__ == '__main__':
             Xtrain0, Ytrain0 = Xtrain[:, cand_list[i], :], Ytrain[:, i]
             Xdev0, Ydev0 = Xdev[:, cand_list[i], :], Ydev[:, i]
             Xtest0 = Xtest[:, cand_list[i], :]
-            print('>>start training model for station-%i predictday-%i'%(i, predictday))
+            print('>start training model for station-%i predictday-%i'%(i, predictday))
             print('num of features:%i'%tnn.input_dim)
             tnn.BuildModel()
             tnn.TrainModel(Xtrain0, Ytrain0, Xdev0, Ydev0)
@@ -151,14 +151,14 @@ if __name__ == '__main__':
             Vy.append(tnn.Test(Xtest0))
 
             tf.reset_default_graph()
-            print('>>training finished! final val_mse:%.5f'%tnn.val_mse_min)
-        print('>>>拟合所有%ith timepoint 模型完成！validation_mse: %f'%(predictday+1, np.mean(mse_station)))
+            print('>training finished! final val_mse:%.5f'%tnn.val_mse_min)
+        print('>>拟合所有%ith timepoint 模型完成！validation_mse: %f'%(predictday+1, np.mean(mse_station)))
         print('每个站点的mse为:')
         print(mse_station)
         Ysubmit.append(np.array(Vy))
         mse_mat.append(mse_station)
     mse_mat = np.array(mse_mat)
-    print('>>>拟合所有模型完成！validation_mse: %f'%np.mean(mse_mat))
+    print('>>拟合所有模型完成！validation_mse: %f'%np.mean(mse_mat))
     mse_mat = pd.DataFrame(10000*mse_mat.transpose(), columns=('3', '6', '9'))
     mse_mat.index = list(range(228))
     mse_mat = mse_mat.round(2)
@@ -174,7 +174,7 @@ if __name__ == '__main__':
                 for i in range(228):
                     res = res.append({'Id': '%i_%i_%i' % (d, timepoint[t], i), 'Expected': Ysubmit[t, i, d]},
                                      ignore_index=True)
-        res.to_csv('prediction.csv', header=True, index=False)
+        res.to_csv('prediction_tnn.csv', header=True, index=False)
 
 
 
