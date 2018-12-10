@@ -13,6 +13,8 @@ Model_dir = 'tnnModel/'
 if not os.path.exists(Model_dir):
     os.mkdir(Model_dir)
 mse_file = 'tnn_mse.csv'
+submit = True
+
 class TrafficNN():
     def __init__(self):
         self.batchsize = 32
@@ -23,7 +25,6 @@ class TrafficNN():
         self.save_dir = ''
         self.best_model = ''
         self.val_mse_min = np.inf
-        self.dense_num = 1
 
     def BuildModel(self):
         self.X_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, self.time_step))
@@ -37,6 +38,7 @@ class TrafficNN():
         Dense = tf.reshape(tf.einsum('ntij,tjk,ntkl->ntil', X_left, A_matrix, X_right),
                               shape=(-1, self.input_dim))
         Dense = tf.div(Dense, A_matrix_fro)
+        Dense = tf.layers.batch_normalization(Dense, momentum=0.8)
         Dense = tf.nn.tanh(Dense)
         Dense = tf.layers.dense(Dense, int(0.7*self.input_dim), kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0))
         Dense = tf.nn.tanh(Dense)
@@ -111,7 +113,6 @@ class TrafficNN():
 
 
 if __name__ == '__main__':
-    submit = False
     tnn = TrafficNN()
     preprocess = PreProcess()
     cand_list = preprocess.select_nearest()
@@ -132,7 +133,6 @@ if __name__ == '__main__':
             # 模型预参数
             tnn.input_dim = len(cand_list[i])
             tnn.val_mse_min = np.inf
-            tnn.dense_num = 1 if predictday==14 else 2
             save_dir = Model_dir + 'predictday%i/station%i/'%(predictday, i)
             if not os.path.exists(save_dir):
                 os.mkdir(save_dir)

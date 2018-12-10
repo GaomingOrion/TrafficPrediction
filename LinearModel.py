@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from sklearn import linear_model
 from sklearn.ensemble import RandomForestRegressor
 import xgboost as xgb
@@ -21,7 +21,7 @@ def each_ridge_model(Xtrain, Ytrain):
 
 def each_lasso_model(Xtrain, Ytrain):
     model = linear_model.LassoCV(alphas=[0.00001, 0.00002, 0.00004, 0.00006, 0.00008, 0.0001],
-                                 max_iter=10000, fit_intercept=False, normalize=False)
+                                 max_iter=20000, fit_intercept=False, normalize=False)
     model.fit(Xtrain, Ytrain)
     print(model.alpha_)
     return model
@@ -39,7 +39,7 @@ def each_xgb_model(Xtrain, Ytrain):
     model = None
     return model
 
-
+mse_file = 'lasso_mse.csv'
 if __name__ == '__main__':
     prepro = PreProcess()
     cand_list = prepro.select_nearest()
@@ -73,18 +73,18 @@ if __name__ == '__main__':
         Ysubmit.append(np.array(Vy))
     mse_mat = np.array(mse_mat)
     print('>>>拟合所有模型完成！validation_mse: %f'%np.mean(mse_mat))
-    # mse_mat = pd.DataFrame(10000*mse_mat.transpose(), columns=('3', '6', '9'))
-    # mse_mat.index = list(range(228))
-    # mse_mat = mse_mat.round(2)
-    # mse_mat.to_csv('EachStationMse.csv', header=True, index=True)
+    mse_mat = pd.DataFrame(10000*mse_mat.transpose(), columns=('3', '6', '9'))
+    mse_mat.index = list(range(228))
+    mse_mat = mse_mat.round(2)
+    mse_mat.to_csv(mse_file, header=True, index=True)
 
     # 生成提交的csv文件
-    # Ysubmit = data_inv_tf(np.array(Ysubmit))
-    # res = pd.DataFrame(columns=['Id', 'Expected'])
-    # timepoint = [15, 30, 45]
-    # for d in range(80):
-    #     for t in range(3):
-    #         for i in range(228):
-    #             res = res.append({'Id': '%i_%i_%i' % (d, timepoint[t], i), 'Expected': Ysubmit[t, i, d]},
-    #                              ignore_index=True)
-    # res.to_csv('prediction.csv', header=True, index=False)
+    Ysubmit = prepro.data_inv_tf(np.array(Ysubmit))
+    res = pd.DataFrame(columns=['Id', 'Expected'])
+    timepoint = [15, 30, 45]
+    for d in range(80):
+        for t in range(3):
+            for i in range(228):
+                res = res.append({'Id': '%i_%i_%i' % (d, timepoint[t], i), 'Expected': Ysubmit[t, i, d]},
+                                 ignore_index=True)
+    res.to_csv('prediction_lm.csv', header=True, index=False)

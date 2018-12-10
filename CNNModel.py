@@ -2,10 +2,14 @@ from keras.layers import*
 from keras.models import*
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
+from keras import backend as K
 import pandas as pd
 import os
 from PreProcess import PreProcess
 
+# tensorflow use cpu
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 Model_dir = 'cnnModel/'
 if not os.path.exists(Model_dir):
@@ -46,7 +50,7 @@ class TrafficCNN():
         #print(model.summary())
     
         #训练模型
-        checkpointer = ModelCheckpoint(filepath=Model_dir + 'checkpoint-val_mse_{val_mean_squared_error:.5f}.hdf5',
+        checkpointer = ModelCheckpoint(filepath=self.save_dir + 'checkpoint-val_mse_{val_mean_squared_error:.5f}.hdf5',
                                        monitor='val_mean_squared_error', save_best_only=True)
         Xtrain = np.transpose(Xtrain, (0, 2, 1))
         Xdev = np.transpose(Xdev, (0, 2, 1))
@@ -55,8 +59,7 @@ class TrafficCNN():
     
         # 返回val_mse最小的模型
         least_mse = np.min(history.history['val_mean_squared_error'])
-        print(least_mse)
-        model.load_weights(Model_dir + 'checkpoint-val_mse_%.5f.hdf5'%(least_mse))
+        model.load_weights(self.save_dir + 'checkpoint-val_mse_%.5f.hdf5'%(least_mse))
         # test数据集，计算预测结果
         Yhat = model.predict(np.transpose(Xtest, (0, 2, 1)))
         return model, least_mse, Yhat
@@ -94,6 +97,7 @@ if __name__ == '__main__':
             mse_station.append(mse)
             Vy.append(Yhat)
             print('>training finished! final val_mse:%.5f'%mse)
+            K.clear_session()
         print('>>拟合所有%ith timepoint 模型完成！validation_mse: %f' % (predictday + 1, np.mean(mse_station)))
         print('每个站点的mse为:')
         print(mse_station)
