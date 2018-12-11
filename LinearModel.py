@@ -39,7 +39,7 @@ def each_xgb_model(Xtrain, Ytrain):
     model = None
     return model
 
-mse_file = 'lasso_mse.csv'
+mse_file = 'csv_file/lasso_mse.csv'
 if __name__ == '__main__':
     prepro = PreProcess()
     cand_list = prepro.select_nearest()
@@ -87,4 +87,4 @@ if __name__ == '__main__':
             for i in range(228):
                 res = res.append({'Id': '%i_%i_%i' % (d, timepoint[t], i), 'Expected': Ysubmit[t, i, d]},
                                  ignore_index=True)
-    res.to_csv('prediction_lm.csv', header=True, index=False)
+    res.to_csv('csv_file/prediction_lm.csv', header=True, index=False)

@@ -12,7 +12,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 Model_dir = 'tnnModel/'
 if not os.path.exists(Model_dir):
     os.mkdir(Model_dir)
-mse_file = 'tnn_mse.csv'
+mse_file = 'csv_file/tnn_mse.csv'
 submit = True
 
 class TrafficNN():
@@ -129,7 +129,6 @@ if __name__ == '__main__':
             os.mkdir(Model_dir + 'predictday%i'%predictday)
 
         for i in range(228):
-        #for i in [6]:
             # 模型预参数
             tnn.input_dim = len(cand_list[i])
             tnn.val_mse_min = np.inf
@@ -174,7 +173,7 @@ if __name__ == '__main__':
                 for i in range(228):
                     res = res.append({'Id': '%i_%i_%i' % (d, timepoint[t], i), 'Expected': Ysubmit[t, i, d]},
                                      ignore_index=True)
-        res.to_csv('prediction_tnn.csv', header=True, index=False)
+        res.to_csv('csv_file/prediction_tnn.csv', header=True, index=False)
 
 
 

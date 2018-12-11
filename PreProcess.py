@@ -15,7 +15,7 @@ class PreProcess():
                     cand_list[j].append(i)
         return cand_list
 
-    def select_k_nearest(self, k=20):
+    def select_k_nearest(self, k=50):
         dis_mat = np.array(pd.read_csv('data/distance.csv', encoding='utf-8', names=list(range(228))))
         # 选出每个station距离小于5km的其他station
         cand_list = []
@@ -37,6 +37,7 @@ class PreProcess():
         X, Y = np.array(X), np.array(Y)
         # 随机选取一部分作为验证集
         shuffle_index = np.array(list(range(X.shape[0])))
+        # np.random.seed(200)
         np.random.shuffle(shuffle_index)
         n_train = int(X.shape[0] * 0.85)
         Xtrain, Ytrain = X[shuffle_index[:n_train]], Y[shuffle_index[:n_train]]
@@ -55,7 +56,7 @@ class PreProcess():
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
     def data_tf(self, df):
-        return df*0.01
+        return df*0.01-0.5
 
     def data_inv_tf(self, df):
-        return 100*df
+        return 100*df+50
