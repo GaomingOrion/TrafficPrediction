@@ -20,8 +20,8 @@ class TrafficCNN():
         model.add(BatchNormalization(momentum=0.9, input_shape=(self.time_step, self.input_dim)))
         model.add(Conv1D(filters=100, kernel_size=4))
         model.add(Activation('relu'))
-        model.add(Conv1D(filters=100, kernel_size=3))
-        model.add(Activation('relu'))
+        # model.add(Conv1D(filters=100, kernel_size=3))
+        # model.add(Activation('relu'))
         model.add(Conv1D(filters=50, kernel_size=3))
         model.add(Activation('relu'))
         model.add(Flatten())
@@ -57,14 +57,14 @@ if __name__ == '__main__':
 
     preprocess = PreProcess()
     cnn = TrafficCNN()
-    num_features = 228
-    cand_list = preprocess.select_k_nearest(num_features)
+    #num_features = 30
+    cand_list = preprocess.select_nearest()
     Model_dir = 'cnnModel/'
     if not os.path.exists(Model_dir):
         os.mkdir(Model_dir)
     test_file = 'csv_file/test.txt'
-    with open(test_file, 'a') as f:
-        f.write(str(num_features) + '\n')
+    # with open(test_file, 'a') as f:
+    #     f.write(str(num_features) + '\n')
 
     for predictday in [14, 17, 20]:
         Xtrain, Ytrain, Xdev, Ydev, Xtest = preprocess.readdata(predictday)

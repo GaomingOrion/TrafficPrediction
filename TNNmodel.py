@@ -18,7 +18,7 @@ submit = True
 class TrafficNN():
     def __init__(self):
         self.batchsize = 32
-        self.epochs = 100
+        self.epochs = 40
         self.time_step = 12
         # will change
         self.input_dim = 0
@@ -29,11 +29,13 @@ class TrafficNN():
     def BuildModel(self):
         self.X_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, self.time_step))
         self.y_ph = tf.placeholder(tf.float32, shape=(None,))
-        A_matrix = tf.get_variable('A_matrix', shape=[self.input_dim, self.time_step, self.time_step])
+        self.x_normal = tf.layers.batch_normalization(self.X_ph, momentum=0.8)
+        A_matrix = tf.get_variable('A_matrix', shape=[self.input_dim, self.time_step, self.time_step],
+                                initializer=tf.contrib.layers.xavier_initializer())
         A_matrix_fro = tf.norm(A_matrix, ord='fro', axis=(1, 2))
-        X_left = tf.gather(self.X_ph, [0]*self.input_dim, axis=1)
+        X_left = tf.gather(self.x_normal, [0]*self.input_dim, axis=1)
         X_left = tf.reshape(X_left, shape=(-1, self.input_dim, 1, self.time_step))
-        X_right = tf.reshape(self.X_ph, shape=(-1, self.input_dim, self.time_step, 1))
+        X_right = tf.reshape(self.x_normal, shape=(-1, self.input_dim, self.time_step, 1))
 
         Dense = tf.reshape(tf.einsum('ntij,tjk,ntkl->ntil', X_left, A_matrix, X_right),
                               shape=(-1, self.input_dim))
@@ -48,7 +50,7 @@ class TrafficNN():
 
         reg_losses = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         self.loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))\
-                    +1e-4*reg_losses#+1e-4*tf.reduce_sum(tf.square(A_matrix))
+                    +1e-3*reg_losses+1e-4*tf.reduce_sum(tf.square(A_matrix))
         optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
         self.train_op = optimizer.minimize(self.loss)
 
@@ -107,7 +109,7 @@ class TrafficNN():
                             self.best_model = model_path
                             self.val_mse_min = mse
                             saver.save(sess, model_path)
-                        print('epoch%i--loss:%.4f, val_mse:%.4f'%(epoch, loss, mse))
+                        print('epoch%i--train_mse:%.4f, val_mse:%.4f'%(epoch, loss, mse))
                         break
 
 
@@ -115,7 +117,7 @@ class TrafficNN():
 if __name__ == '__main__':
     tnn = TrafficNN()
     preprocess = PreProcess()
-    cand_list = preprocess.select_nearest()
+    cand_list = preprocess.select_nearest(7000)
     # 保存要提交的结果
     Ysubmit = []
     # 保存所有模型的mse

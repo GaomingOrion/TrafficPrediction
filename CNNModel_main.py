@@ -22,7 +22,7 @@ submit_file = 'csv_file/submit_cnn_1.csv'
 # 训练数据等
 preprocess = PreProcess()
 cnn = TrafficCNN()
-cand_list = preprocess.select_k_nearest(100)
+cand_list = preprocess.select_nearest()
 Train_data = dict()
 for predictday in [14, 17, 20]:
     Train_data[predictday] = preprocess.readdata(predictday)
@@ -48,15 +48,15 @@ def main(predictday, i):
     print('>training finished! final val_mse:%.5f' % mse)
 
     # 写入结果文件
-    with open(mse_file, 'a') as f:
-        f.write(str(predictday) + ',' + str(i) + '\t' + str(round(10000*mse, 2)) + '\n')
-    timepoint = {14:15, 17:30, 20:45}[predictday]
-    with open(submit_file, 'a') as f:
-        for k in range(Yhat.shape[0]):
-            f.write(str(k) + '_' + str(timepoint) + '_' + str(i) + ',' + str(Yhat[k, 0]) + '\n')
-    print('>结果写入完成')
+    # with open(mse_file, 'a') as f:
+    #     f.write(str(predictday) + ',' + str(i) + '\t' + str(round(10000*mse, 2)) + '\n')
+    # timepoint = {14:15, 17:30, 20:45}[predictday]
+    # with open(submit_file, 'a') as f:
+    #     for k in range(Yhat.shape[0]):
+    #         f.write(str(k) + '_' + str(timepoint) + '_' + str(i) + ',' + str(Yhat[k, 0]) + '\n')
+    # print('>结果写入完成')
 
 if __name__ == '__main__':
     predictday = 14
-    for i in range(228):
+    for i in [5]:
         main(predictday, i)
