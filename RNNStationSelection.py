@@ -2,124 +2,128 @@ from keras.layers import*
 from keras.models import*
 from keras.callbacks import ModelCheckpoint
 from keras import optimizers
-import pandas as pd
+import os
 
-import matplotlib.pyplot as plt
-
-from random import shuffle
-
-dis_mat = np.array(pd.read_csv('data/distance.csv', encoding='utf-8', names=list(range(228))))
-
-# 选出每个station距离小于5km的其他station
-cand_list = [[k] for k in range(228)]
-for i in range(228):
-    for j in range(i+1, 228):
-        if dis_mat[i, j] < 5000:
-            cand_list[i].append(j)
-            cand_list[j].append(i)
-
-EPOCHS = 50
-BATCH_SIZE = 128
-WINDOW = 3
-
-def each_lstm_model(i, loadpath=None, plot=True):
-    # 搭建网络
-    InputDim = len(cand_list[i])*WINDOW
-    print('特征个数为%i'%InputDim)
-    model = Sequential()
-    model.add(LSTM(20, input_shape=(InputDim, 12-WINDOW+1), dropout=0.2, return_sequences=True))
-    model.add(LSTM(10, dropout=0.2))
-    model.add(Dense(1))
-    opt = optimizers.Adam()
-    model.compile(optimizer=opt, loss='mse', metrics=['mse'])
-    if loadpath:
-        model.load_weights(loadpath)
-    print(model.summary())
-
-    #训练模型
-    checkpointer = ModelCheckpoint(filepath='SelectModel/checkpoint-%i-{epoch:02d}e-val_mse_{val_mean_squared_error:.5f}.hdf5'%i,
-                                   monitor='val_mean_squared_error', save_best_only=True)
-    Xtrain_station = flatten_bylag(Xtrain[:, cand_list[i], :], WINDOW)
-    Xtest_station = flatten_bylag(Xtest[:, cand_list[i], :], WINDOW)
-    history = model.fit(Xtrain_station, Ytrain[:, i], epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1,
-              validation_data=(Xtest_station, Ytest[:, i]), callbacks=[checkpointer])
-
-    if plot:
-        plt.plot(history.history['loss'], label='train')
-        plt.plot(history.history['val_loss'], label='test')
-        plt.show()
-    return model, history
-
-def each_gru_model(i, loadpath=None, plot=True):
-    # 搭建网络
-    InputDim = len(cand_list[i])*WINDOW
-    print('特征个数为%i'%InputDim)
-    model = Sequential()
-    model.add(GRU(30, input_shape=(InputDim, 12-WINDOW+1), dropout=0.2, return_sequences=True))
-    model.add(GRU(10, dropout=0.2))
-    model.add(Dense(1))
-    opt = optimizers.Adam()
-    model.compile(optimizer=opt, loss='mse', metrics=['mse'])
-    if loadpath:
-        model.load_weights(loadpath)
-    print(model.summary())
-
-    #训练模型
-    checkpointer = ModelCheckpoint(filepath='SelectModel/checkpoint-%i-{epoch:02d}e-val_mse_{val_mean_squared_error:.5f}.hdf5'%i,
-                                   monitor='val_mean_squared_error', save_best_only=True)
-    Xtrain_station = flatten_bylag(Xtrain[:, cand_list[i], :], WINDOW)
-    Xtest_station = flatten_bylag(Xtest[:, cand_list[i], :], WINDOW)
-    history = model.fit(Xtrain_station, Ytrain[:, i], epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1,
-              validation_data=(Xtest_station, Ytest[:, i]), callbacks=[checkpointer])
-
-    if plot:
-        plt.plot(history.history['loss'], label='train')
-        plt.plot(history.history['val_loss'], label='test')
-        plt.show()
-    return model, history
+from PreProcess import PreProcess
 
 
-def flatten_bylag(Xdata, window=3):
-    if window == 1:
-        return Xdata
-    data_shape = Xdata.shape
-    res = [[X[:, i:(i+window)] for i in range(data_shape[2]-window+1)] for X in Xdata]
-    res = np.array(res).reshape(data_shape[0], data_shape[1]*window, data_shape[2]-window+1)
-    return res
+class CNN_RNN():
+    def __init__(self):
+        self.batchsize = 32
+        self.epochs = 50
+        self.time_step = 12
 
-if True:
-    predictday = 14
-    ## 用train数据集进行训练
+        self.input_dim = 228
+        self.save_dir = ''
 
-    # test = list(range(34))
-    # shuffle(test)
-    # test = test[:2]
-    test = [3, 20]
-    # 读取训练数据
-    Xtrain = []
-    Ytrain = []
-    for k in [i for i in range(34) if i not in test]:
-        df = pd.read_csv('data/train/%i.csv' % k, encoding='utf-8', names=list(range(228)))
-        df = np.array(df).transpose()
-        df = (df - 50) * 0.01
-        Xtrain += [df[:, i:(i + 12)] for i in range(288 - predictday)]
-        Ytrain += [df[:, i + predictday] for i in range(288 - predictday)]
-    Xtrain = np.array(Xtrain)
-    Ytrain = np.array(Ytrain)
-    print('训练数据shape', Xtrain.shape, Ytrain.shape)
+    def model(self, Xtrain, Ytrain, Xdev, Ydev, Xtest, loadpath=None):
+        # 搭建网络
+        model = Sequential()
+        model.add(BatchNormalization(momentum=0.9, input_shape=(self.time_step, self.input_dim)))
+        model.add(Conv1D(filters=self.input_dim+20, kernel_size=1))
+        model.add(Activation('relu'))
+        # model.add(Conv1D(filters=20, kernel_size=1))
+        # model.add(Activation('relu'))
+        model.add(Permute((2, 1)))
+        #model.add(LSTM(20, return_sequences=True))
+        model.add(LSTM(self.input_dim+20))
+        model.add(Dense(1))
 
-    # 读取测试数据，用来估计mse
-    Xtest = []
-    Ytest = []
-    for k in test:
-        df = pd.read_csv('data/train/%i.csv' % k, encoding='utf-8', names=list(range(228)))
-        df = np.array(df).transpose()
-        df = (df - 50) * 0.01
-        Xtest += [df[:, i:(i + 12)] for i in range(288 - predictday)]
-        Ytest += [df[:, i + predictday] for i in range(288 - predictday)]
-    Xtest = np.array(Xtest)
-    Ytest = np.array(Ytest)
-    print('测试数据shape', Xtest.shape, Ytest.shape)
+        opt = optimizers.Adam(lr=0.001)
+        model.compile(optimizer=opt, loss='mse', metrics=['mse'])
+        if loadpath:
+            model.load_weights(loadpath)
+        print(model.summary())
 
-    model = each_gru_model(117)
-    #model = each_rnn_model(1, loadpath='SelectModel/checkpoint-1-31e-val_mse_0.00241.hdf5')
+        # 训练模型
+        checkpointer = ModelCheckpoint(filepath=self.save_dir + 'checkpoint-val_mse_{val_mean_squared_error:.6f}.hdf5',
+                                       monitor='val_mean_squared_error', save_best_only=True)
+        Xtrain = np.transpose(Xtrain, (0, 2, 1))
+        Xdev = np.transpose(Xdev, (0, 2, 1))
+        history = model.fit(Xtrain, Ytrain, epochs=self.epochs, batch_size=self.batchsize, verbose=2,
+                            validation_data=(Xdev, Ydev), callbacks=[checkpointer])
+
+        # 返回val_mse最小的模型
+        least_mse = np.min(history.history['val_mean_squared_error'])
+        model.load_weights(self.save_dir + 'checkpoint-val_mse_%.6f.hdf5' % (least_mse))
+        # test数据集，计算预测结果
+        Yhat = model.predict(np.transpose(Xtest, (0, 2, 1)))
+        del model
+        return least_mse, Yhat
+
+
+# def each_lstm_model(i, loadpath=None, plot=True):
+#     # 搭建网络
+#     InputDim = len(cand_list[i])*WINDOW
+#     print('特征个数为%i'%InputDim)
+#     model = Sequential()
+#     model.add(BatchNormalization(momentum=0.9, input_shape=(InputDim, 12)))
+#     model.add(Conv1D(filters=20, kernel_size=4))
+#     model.add(LSTM(20, return_sequences=True))
+#     #model.add(LSTM(10, dropout=0.2))
+#     model.add(Dense(1))
+#     opt = optimizers.Adam()
+#     model.compile(optimizer=opt, loss='mse', metrics=['mse'])
+#     if loadpath:
+#         model.load_weights(loadpath)
+#     print(model.summary())
+#
+#     #训练模型
+#     checkpointer = ModelCheckpoint(filepath='SelectModel/checkpoint-%i-{epoch:02d}e-val_mse_{val_mean_squared_error:.5f}.hdf5'%i,
+#                                    monitor='val_mean_squared_error', save_best_only=True)
+#     Xtrain_station = flatten_bylag(Xtrain[:, cand_list[i], :], WINDOW)
+#     Xtest_station = flatten_bylag(Xtest[:, cand_list[i], :], WINDOW)
+#     history = model.fit(Xtrain_station, Ytrain[:, i], epochs=EPOCHS, batch_size=BATCH_SIZE, verbose=1,
+#               validation_data=(Xtest_station, Ytest[:, i]), callbacks=[checkpointer])
+#
+#     if plot:
+#         plt.plot(history.history['loss'], label='train')
+#         plt.plot(history.history['val_loss'], label='test')
+#         plt.show()
+#     return model, history
+
+
+if __name__ == '__main__':
+    # tensorflow use cpu
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+    preprocess = PreProcess()
+    cnn = CNN_RNN()
+    #num_features = 30
+    cand_list = preprocess.select_nearest()
+    Model_dir = 'cnnModel/'
+    if not os.path.exists(Model_dir):
+        os.mkdir(Model_dir)
+    test_file = 'csv_file/test.txt'
+    # with open(test_file, 'a') as f:
+    #     f.write(str(num_features) + '\n')
+
+    for predictday in [14, 17, 20]:
+        Xtrain, Ytrain, Xdev, Ydev, Xtest = preprocess.readdata(predictday)
+        # 创建模型保存路径
+        if not os.path.exists(Model_dir + 'predictday%i'%predictday):
+            os.mkdir(Model_dir + 'predictday%i'%predictday)
+        for i in [6]:
+            # 模型预参数
+            cnn.input_dim = len(cand_list[i])
+            save_dir = Model_dir + 'predictday%i/station%i/'%(predictday, i)
+            if not os.path.exists(save_dir):
+                os.mkdir(save_dir)
+            cnn.save_dir = save_dir
+
+            Xtrain0, Ytrain0 = Xtrain[:, cand_list[i], :], Ytrain[:, i]
+            Xdev0, Ydev0 = Xdev[:, cand_list[i], :], Ydev[:, i]
+            Xtest0 = Xtest[:, cand_list[i], :]
+
+            # 训练模型
+            print('>start training model for station-%i predictday-%i'%(i, predictday))
+            print('num of features:%i'%cnn.input_dim)
+            mse, Yhat = cnn.model(Xtrain0, Ytrain0, Xdev0, Ydev0, Xtest0)
+            print('>training finished! final val_mse:%.5f'%mse)
+
+            # 写入mse
+            with open(test_file, 'a') as f:
+                f.write(str(predictday) + ',' + str(i) + '\t' + str(np.round(10000*mse, 2)) + '\n')
+
+

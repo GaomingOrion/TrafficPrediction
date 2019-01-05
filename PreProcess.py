@@ -73,7 +73,7 @@ class PreProcess():
         Xtrain = []
         Ytrain = []
         test = np.array(range(34))
-        np.random.seed(200)
+        #np.random.seed(1215)
         np.random.shuffle(test)
         test = test[:4]
         for k in [x for x in range(34) if x not in test]:
@@ -108,7 +108,7 @@ class PreProcess():
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
     def data_tf(self, df):
-        return df*0.01-0.5
+        return df*0.01
 
     def data_inv_tf(self, df):
-        return 100*df+50
+        return 100*df

@@ -18,11 +18,11 @@ class TrafficCNN():
         # 搭建网络
         model = Sequential()
         model.add(BatchNormalization(momentum=0.9, input_shape=(self.time_step, self.input_dim)))
-        model.add(Conv1D(filters=100, kernel_size=4))
+        model.add(Conv1D(filters=50, kernel_size=4))
         model.add(Activation('relu'))
         # model.add(Conv1D(filters=100, kernel_size=3))
         # model.add(Activation('relu'))
-        model.add(Conv1D(filters=50, kernel_size=3))
+        model.add(Conv1D(filters=20, kernel_size=3))
         model.add(Activation('relu'))
         model.add(Flatten())
         model.add(Dense(1, activity_regularizer=regularizers.l2(1e-3)))
@@ -66,12 +66,12 @@ if __name__ == '__main__':
     # with open(test_file, 'a') as f:
     #     f.write(str(num_features) + '\n')
 
-    for predictday in [14, 17, 20]:
+    for predictday in [20]:
         Xtrain, Ytrain, Xdev, Ydev, Xtest = preprocess.readdata(predictday)
         # 创建模型保存路径
         if not os.path.exists(Model_dir + 'predictday%i'%predictday):
             os.mkdir(Model_dir + 'predictday%i'%predictday)
-        for i in [0, 26, 31]:
+        for i in [0]:
             # 模型预参数
             cnn.input_dim = len(cand_list[i])
             save_dir = Model_dir + 'predictday%i/station%i/'%(predictday, i)
