@@ -73,7 +73,7 @@ class PreProcess():
         Xtrain = []
         Ytrain = []
         test = np.array(range(34))
-        #np.random.seed(1215)
+        np.random.seed(1215)
         np.random.shuffle(test)
         test = test[:4]
         for k in [x for x in range(34) if x not in test]:
