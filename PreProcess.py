@@ -76,20 +76,20 @@ class PreProcess():
         Xtest = np.array(Xtest)
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
-    def readdata4bignet(self, start, predictday):
+    def readdata4bignet(self, start, end, predictday):
         # 读取训练数据
         Xtrain = []
         Ytrain = []
         test = np.array(range(34))
-        # np.random.seed(1215)
+        np.random.seed(1230)
         np.random.shuffle(test)
         test = test[:4]
         for k in [x for x in range(34) if x not in test]:
             df = pd.read_csv('data/train/%i.csv' % k, encoding='utf-8', names=list(range(228)))
             df = np.array(df).transpose()
             df = self.data_tf(df)
-            Xtrain += [df[:, i:(i + 12)] for i in [start]]
-            Ytrain += [df[:, i + predictday] for i in [start]]
+            Xtrain += [df[:, i:(i + 12)] for i in range(start, end)]
+            Ytrain += [df[:, i + predictday] for i in range(start, end)]
         Xtrain, Ytrain = np.array(Xtrain), np.array(Ytrain)
         print('训练数据shape', Xtrain.shape, Ytrain.shape)
 
@@ -107,13 +107,14 @@ class PreProcess():
 
         # 读取test数据集，用来之后提交预测
         Xtest = []
-        for k in range(start//36, 80, 10):
+        for k in range(start//36, 80, 8):
             df = pd.read_csv('data/test/%i.csv' % k, encoding='utf-8', names=list(range(228)))
             df = np.array(df).transpose()
             df = self.data_tf(df)
             Xtest.append(df)
         Xtest = np.array(Xtest)
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
+
     def readdata(self, predictday):
         # 读取训练数据
         Xtrain = []
@@ -153,12 +154,14 @@ class PreProcess():
         Xtest = np.array(Xtest)
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
-    def generate_data4bignet(self, start, predictday, nearestnum=50):
+    def generate_data4bignet(self, start, end, predictday, nearestnum=50):
         candlist = self.select_k_nearest(nearestnum)
-        Xtrain, Ytrain, Xdev, Ydev, Xtest = self.readdata4bignet(start, predictday)
+        Xtrain, Ytrain, Xdev, Ydev, Xtest = self.readdata4bignet(start, end, predictday)
         Xtrain, Ytrain = self.transformXY4bignet(Xtrain, Ytrain, candlist, nearestnum)
         Xdev, Ydev = self.transformXY4bignet(Xdev, Ydev, candlist, nearestnum)
         Xtest = self.transformXtest4bignet(Xtest, candlist, nearestnum)
+        print('bigNet训练数据shape', Xtrain.shape, Ytrain.shape)
+        print('bigNet测试数据shape', Xdev.shape, Ydev.shape)
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
     def transformXY4bignet(self, X, Y, candlist, nearestnum):
@@ -176,7 +179,7 @@ class PreProcess():
         for i in range(228):
             a = candlist[i][:nearestnum]
             res.append(X[:, a, :])
-        res = np.array(res)
+        res = np.array(res).reshape(-1, nearestnum, 12)
         return res
 
     def data_tf(self, df):

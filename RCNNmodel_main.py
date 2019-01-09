@@ -1,6 +1,7 @@
 from PreProcess import PreProcess
 from CRNNmodel import TrafficCRNN
 import tensorflow as tf
+import numpy as np
 import os
 
 use_cpu = True
@@ -36,6 +37,7 @@ def main(predictday, i):
 
     # 模型参数
     model.input_dim = len(cand_list[i])
+    model.val_mse_min = np.inf
     save_dir = Model_dir + 'predictday%i/station%i/' % (predictday, i)
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
@@ -51,7 +53,6 @@ def main(predictday, i):
 
     tf.reset_default_graph()
     Yhat = preprocess.data_inv_tf(Yhat)
-    print(Yhat)
     print('>training finished! final val_mse:%.5f' % mse)
 
     # 写入结果文件
@@ -65,5 +66,11 @@ def main(predictday, i):
 
 if __name__ == '__main__':
     predictday = 14
-    for i in range(228):
+    for i in range(6, 228):
         main(predictday, i)
+        # try:
+        #     main(predictday, i)
+        # except:
+        #     with open('csv_file/error.txt', 'a+') as f:
+        #         f.write(str(i)+'\n')
+        #     tf.reset_default_graph()

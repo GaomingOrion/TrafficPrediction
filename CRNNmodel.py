@@ -7,7 +7,7 @@ import os
 class TrafficCRNN():
     def __init__(self):
         self.batchsize = 32
-        self.epochs = 50
+        self.epochs = 40
         self.time_step = 12
         # will change
         self.input_dim = 0
@@ -20,8 +20,11 @@ class TrafficCRNN():
         self.y_ph = tf.placeholder(tf.float32, shape=(None,))
         self.X_norm = tf.layers.batch_normalization(self.X_ph, momentum=0.8)
         Xconv = tf.layers.conv1d(inputs=tf.transpose(self.X_norm, perm=[0, 2, 1]),
-                        filters=self.input_dim+20, kernel_size=4,
+                        filters=self.input_dim+20, kernel_size=3,
                     kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
+        # Xconv = tf.layers.conv1d(inputs=Xconv,
+        #                 filters=self.input_dim+20, kernel_size=3,
+        #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
         rnn_in = tf.transpose(Xconv, perm=[0, 2, 1])
         cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim+20, initializer=tf.orthogonal_initializer())
         _, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
@@ -33,7 +36,7 @@ class TrafficCRNN():
 
 
     def Predict(self, sess, Xdev):
-        per_cal = 2000
+        per_cal = 200
         y_hat = np.array([])
         low = 0
         while True:
@@ -59,7 +62,7 @@ class TrafficCRNN():
             y_test = self.Predict(sess, Xtest)
         return y_test
 
-    def TrainModel(self, Xtrain, Ytrain, Xdev, Ydev, previous_modelpath=None):
+    def TrainModel(self, Xtrain, Ytrain, Xdev, Ydev, previous_modelpath=None, epochsep=1):
         saver = tf.train.Saver(max_to_keep=100)
         with tf.Session() as sess:
             if previous_modelpath:
@@ -68,7 +71,7 @@ class TrafficCRNN():
                 sess.run(tf.global_variables_initializer())
 
             low = 0
-            for epoch in range(1, self.epochs+1):
+            for epoch in range(epochsep, (self.epoch+1)*epochsep, epochsep):
                 shuffle_idx = list(range(Xtrain.shape[0]))
                 np.random.shuffle(shuffle_idx)
                 while True:
@@ -92,7 +95,7 @@ class TrafficCRNN():
 
 
 if __name__ == '__main__':
-    Model_dir = 'crnnModel'
+    Model_dir = 'crnnModel/'
     tnn = TrafficCRNN()
     preprocess = PreProcess()
     cand_list = preprocess.select_nearest(5000)
@@ -100,7 +103,7 @@ if __name__ == '__main__':
     Ysubmit = []
     # 保存所有模型的mse
     mse_mat = []
-    for predictday in [14, 17, 20]:
+    for predictday in [20]:
         Xtrain, Ytrain, Xdev, Ydev, Xtest = preprocess.readdata(predictday)
         mse_station = []
         Vy = []
@@ -108,7 +111,7 @@ if __name__ == '__main__':
         if not os.path.exists(Model_dir + 'predictday%i'%predictday):
             os.mkdir(Model_dir + 'predictday%i'%predictday)
 
-        for i in [21]:
+        for i in [73]:
             # 模型预参数
             tnn.input_dim = len(cand_list[i])
             tnn.val_mse_min = np.inf
