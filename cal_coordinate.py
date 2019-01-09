@@ -35,18 +35,57 @@ def adjust(a, tol=0.05):
                 res[j] = [a[i][0]+0.1, a[i][1]+0.1]
     return res
 
+def getmeanv():
+    res = []
+    for k in range(34):
+        df = np.array(pd.read_csv('data/train/1.csv', encoding='utf-8', names=list(range(228))))
+        res.append(df)
+    res = np.array(res)
+    return np.mean(res, axis=0)
+
+def readmse():
+    mse = pd.read_csv('csv_file/tnn_mse_1209.csv', index_col=0)
+    return mse['9']
+
+def jam_type():
+    v = getmeanv()
+    v_mean = np.mean(v.reshape(-1, 6, 228), axis=1)
+    a = np.min(v_mean[10:18, :], axis=0)
+    b = np.min(v_mean[32:38, :], axis=0)
+    res = []
+    for i in range(228):
+        resi = ''
+        if a[i] < 35:
+            resi += '0,'
+        # elif 30<= a[i] < 50:
+        #     resi +='1,'
+        else:
+            resi += '1,'
+
+        if b[i] < 35:
+            resi += '0'
+        # elif 30<= b[i] < 50:
+        #     resi += '1'
+        else:
+            resi += '1'
+        res.append(resi)
+    return res
 
 def main():
-    df = np.array(pd.read_csv('data/train/1.csv', encoding='utf-8', names=list(range(228))))
+    df = getmeanv()
+    mse = readmse()
     dis_mat = np.array(pd.read_csv('data/distance.csv', encoding='utf-8', names=list(range(228)))) / 1000
     coord = get_coord(dis_mat)
     a = adjust(coord)
+    jam = jam_type()
+    color = ['r', 'black']
     for i in range(228):
         x, y = a[i]
-        v = ','.join(map(lambda x:str(np.round(x, 1)), df[[36*i for i in range(2, 6)], i]))
-        label = str(i) + ',' + v
-        #label = "%i,(%.2f,%.2f),"%(i, coord[i][0], coord[i][1])+v
-        plt.scatter(x, y, s=1, label=label)
+        t = int(jam[i][-1])
+        #v = ','.join(map(lambda x: str(int(x)), df[[i for i in range(6*12, 8*12+13, 2)], i]))
+        #label = str(i) + ',' + v
+        label = "%i,(%.2f,%.2f)"%(i, coord[i][0], coord[i][1]) +"," + str(int(mse[i]))
+        plt.scatter(x, y, s=mse[i]/10, label=label, color=color[t])
     datacursor(formatter='{label}'.format)
     plt.show()
     return a
