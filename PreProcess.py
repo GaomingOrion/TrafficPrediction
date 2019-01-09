@@ -178,7 +178,7 @@ class PreProcess():
             weight = np.exp(-np.array(dis_mat[i, candlist[i]])/2000)
             res.append(np.repeat([weight], X.shape[0], axis=0).reshape(X.shape[0], nearestnum))
         res = np.array(res)
-        return res.reshape(-1, nearestnum)
+        return res.reshape(-1, nearestnum, 1)
 
 
     def transformXY4bignet(self, X, Y, candlist):

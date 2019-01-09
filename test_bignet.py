@@ -18,10 +18,10 @@ class bigNet():
 
     def BuildModel(self):
         self.X_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, self.time_step))
-        self.W_ph = tf.placeholder(tf.float32, shape=(1, self.input_dim))
+        self.W_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, 1))
         self.y_ph = tf.placeholder(tf.float32, shape=(None,))
         self.X_norm = tf.layers.batch_normalization(self.X_ph, momentum=0.8)
-        X_in = tf.einsum('ij,kjl->kil', self.W_ph, self.X_norm)
+        X_in = tf.multiply(self.W_ph, self.X_norm)
         Xconv = tf.layers.conv1d(inputs=tf.transpose(X_in, perm=[0, 2, 1]),
                         filters=self.input_dim, kernel_size=3,
                     kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
@@ -33,10 +33,10 @@ class bigNet():
         cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
         #cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=1.0, output_keep_prob=0.5)
         #_, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
-        rnn_in2, _ = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
+        rnn_in2, _ = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32, scope='first')
         cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
         #cell2 = tf.contrib.rnn.DropoutWrapper(cell2, input_keep_prob=1.0, output_keep_prob=0.5)
-        _, rnn_out = tf.nn.dynamic_rnn(cell2, rnn_in2, dtype=tf.float32)
+        _, rnn_out = tf.nn.dynamic_rnn(cell2, rnn_in2, dtype=tf.float32,scope='second')
 
         self.y_pred = tf.layers.dense(rnn_out.h, 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
         self.total_loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))
