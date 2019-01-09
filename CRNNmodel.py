@@ -71,7 +71,8 @@ class TrafficCRNN():
                 sess.run(tf.global_variables_initializer())
 
             low = 0
-            for epoch in range(epochsep, (self.epoch+1)*epochsep, epochsep):
+            for epoch_idx in range(self.epochs):
+                epoch = epochsep*(epoch_idx+1)
                 shuffle_idx = list(range(Xtrain.shape[0]))
                 np.random.shuffle(shuffle_idx)
                 while True:
@@ -89,7 +90,7 @@ class TrafficCRNN():
                             self.best_model = model_path
                             self.val_mse_min = mse
                             saver.save(sess, model_path)
-                        print('epoch%i--loss:%.4f, val_mse:%.4f'%(epoch, loss, mse))
+                        print('epoch%.1f--loss:%.4f, val_mse:%.4f'%(epoch, loss, mse))
                         break
 
 
