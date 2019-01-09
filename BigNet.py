@@ -78,22 +78,27 @@ def main(predictday, i):
     # 写入结果文件
     with open(mse_file, 'a') as f:
         f.write(str(predictday) + ',' + str(i) + '\t' + str(round(10000*mse, 2)) + '\n')
-    # timepoint = {14:15, 17:30, 20:45}[predictday]
-    # with open(submit_file, 'a') as f:
-    #     for k in range(228):
-    #         for j in range(10):
-    #             idx = 10*k + j
-    #             file_idx = 10*j+i
-    #             f.write(str(file_idx) + '_' + str(timepoint) + '_' + str(i) + ',' + str(Yhat[idx]) + '\n')
-    # print('>结果写入完成')
+    timepoint = {14:15, 17:30, 20:45}[predictday]
+    with open(submit_file, 'a') as f:
+        for k in range(228):
+            for j in range(10):
+                idx = 10*k + j
+                file_idx = 10*j+i
+                f.write(str(file_idx) + '_' + str(timepoint) + '_' + str(i) + ',' + str(Yhat[idx]) + '\n')
+    print('>结果写入完成')
     return mse
 
 if __name__ == '__main__':
-    for predictday in [20]:
-        mse = []
-        for i in [2]:
-            mse.append(main(predictday, i))
-        print(np.mean(mse))
+    for predictday in [14]:
+        mselist = []
+        Yhat_list = []
+        for i in range(8):
+            mse, Yhat = main(predictday, i)
+            mselist.append(mse)
+            Yhat_list.append(Yhat)
+        print(np.mean(mselist))
+        Yhat_list = np.array(Yhat_list)
+        np.save('csv_file/backup%i.npy' % predictday, Yhat_list)
 
 
 
