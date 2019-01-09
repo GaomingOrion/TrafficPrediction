@@ -18,17 +18,17 @@ class bigNet(TrafficCRNN):
         #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
 
         rnn_in = tf.transpose(Xconv, perm=[0, 2, 1])
-        cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim-10, initializer=tf.orthogonal_initializer())
-        cell_dropout = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=0.8, output_keep_prob=0.8)
+        cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim-20, initializer=tf.orthogonal_initializer())
+        cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=1.0, output_keep_prob=0.5)
         #_, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
-        rnn_in2, _ = tf.nn.dynamic_rnn(cell_dropout, rnn_in, dtype=tf.float32)
-        cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
-        cell2_dropout = tf.contrib.rnn.DropoutWrapper(cell2, input_keep_prob=0.8, output_keep_prob=0.8)
-        _, rnn_out = tf.nn.dynamic_rnn(cell2_dropout, rnn_in2, dtype=tf.float32)
+        rnn_in2, _ = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
+        cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim-20, initializer=tf.orthogonal_initializer())
+        cell2 = tf.contrib.rnn.DropoutWrapper(cell2, input_keep_prob=1.0, output_keep_prob=0.5)
+        _, rnn_out = tf.nn.dynamic_rnn(cell2, rnn_in2, dtype=tf.float32)
 
         self.y_pred = tf.layers.dense(rnn_out.h, 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
         self.total_loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))
-        optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+        optimizer = tf.train.AdamOptimizer(learning_rate=1e-4)
         self.train_op = optimizer.minimize(self.total_loss)
 
 use_cpu = True
@@ -57,7 +57,7 @@ model.epochs = 40
 p = PreProcess()
 
 def main(predictday, i):
-    Xtrain, Ytrain, Xdev, Ydev, Xtest = p.generate_data4bignet(36 * i, 36*i+3, predictday, 50)
+    Xtrain, Ytrain, Xdev, Ydev, Xtest = p.generate_data4bignet(36 * i, 36*i+4, predictday, 60)
     model.input_dim = Xtrain.shape[1]
     model.save_dir = Model_dir + 'predictday%i/%i/' % (predictday, i)
     model.val_mse_min = np.inf
@@ -66,13 +66,13 @@ def main(predictday, i):
     print('>start training model for predictday-%i start-%i' % (predictday, i))
     print('num of features:%i' % model.input_dim)
     model.BuildModel()
-    model.TrainModel(Xtrain, Ytrain, Xdev, Ydev,epochsep=0.1)
+    model.TrainModel(Xtrain, Ytrain, Xdev, Ydev,
+        previous_modelpath='bigNet/predictday20/2/model-e14-loss0.0050-val_mse-0.0068', epochsep=1)
     mse = model.val_mse_min
     Yhat = model.Test(Xtest)
 
     tf.reset_default_graph()
     Yhat = p.data_inv_tf(Yhat)
-    print(Yhat.shape)
     print('>training finished! final val_mse:%.5f' % mse)
 
     # 写入结果文件
@@ -86,12 +86,14 @@ def main(predictday, i):
     #             file_idx = 10*i+j
     #             f.write(str(file_idx) + '_' + str(timepoint) + '_' + str(i) + ',' + str(Yhat[idx]) + '\n')
     # print('>结果写入完成')
+    return mse
 
 if __name__ == '__main__':
-    p = PreProcess()
     for predictday in [20]:
+        mse = []
         for i in [2]:
-            main(predictday, i)
+            mse.append(main(predictday, i))
+        print(np.mean(mse))
 
 
 

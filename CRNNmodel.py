@@ -81,7 +81,7 @@ class TrafficCRNN():
                                  self.y_ph: Ytrain[shuffle_idx[low:low+n_sample]]}
                     sess.run(self.train_op, feed_dict=feed_dict)
                     low += n_sample
-                    if low >= Xtrain.shape[0]:
+                    if low >= epochsep*Xtrain.shape[0]:
                         low = 0
                         _, loss = self.Evaluate(sess, Xtrain, Ytrain)
                         _, mse = self.Evaluate(sess, Xdev, Ydev)
