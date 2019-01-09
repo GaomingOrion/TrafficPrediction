@@ -18,11 +18,13 @@ class bigNet(TrafficCRNN):
         #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
 
         rnn_in = tf.transpose(Xconv, perm=[0, 2, 1])
-        cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
+        cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim-10, initializer=tf.orthogonal_initializer())
+        cell_dropout = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=0.8, output_keep_prob=0.8)
         #_, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
-        rnn_in2, _ = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
-        cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim+20, initializer=tf.orthogonal_initializer())
-        _, rnn_out = tf.nn.dynamic_rnn(cell2, rnn_in2, dtype=tf.float32)
+        rnn_in2, _ = tf.nn.dynamic_rnn(cell_dropout, rnn_in, dtype=tf.float32)
+        cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
+        cell2_dropout = tf.contrib.rnn.DropoutWrapper(cell2, input_keep_prob=0.8, output_keep_prob=0.8)
+        _, rnn_out = tf.nn.dynamic_rnn(cell2_dropout, rnn_in2, dtype=tf.float32)
 
         self.y_pred = tf.layers.dense(rnn_out.h, 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
         self.total_loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))
