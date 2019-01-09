@@ -154,27 +154,46 @@ class PreProcess():
         Xtest = np.array(Xtest)
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
-    def generate_data4bignet(self, start, end, predictday, nearestnum=50):
+    def generate_data4bignet(self, start, end, predictday, nearestnum=50, return_weight=False):
+        dis_mat = np.array(pd.read_csv('data/distance.csv', encoding='utf-8', names=list(range(228))))
         candlist = self.select_k_nearest(nearestnum)
         Xtrain, Ytrain, Xdev, Ydev, Xtest = self.readdata4bignet(start, end, predictday)
-        Xtrain, Ytrain = self.transformXY4bignet(Xtrain, Ytrain, candlist, nearestnum)
-        Xdev, Ydev = self.transformXY4bignet(Xdev, Ydev, candlist, nearestnum)
-        Xtest = self.transformXtest4bignet(Xtest, candlist, nearestnum)
+        if return_weight:
+            Wtrain = self.getWeight(Xtrain, candlist, dis_mat)
+            Wdev = self.getWeight(Xdev, candlist, dis_mat)
+            Wtest = self.getWeight(Xtest, candlist, dis_mat)
+        Xtrain, Ytrain = self.transformXY4bignet(Xtrain, Ytrain, candlist)
+        Xdev, Ydev = self.transformXY4bignet(Xdev, Ydev, candlist)
+        Xtest = self.transformXtest4bignet(Xtest, candlist)
         print('bigNet训练数据shape', Xtrain.shape, Ytrain.shape)
         print('bigNet测试数据shape', Xdev.shape, Ydev.shape)
+        if return_weight:
+            return Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
-    def transformXY4bignet(self, X, Y, candlist, nearestnum):
+    def getWeight(self, X, candlist, dis_mat):
+        nearestnum = len(candlist[0])
+        res = []
+        for i in range(228):
+            weight = np.exp(-np.array(dis_mat[i, candlist[i]])/2000)
+            res.append(np.repeat([weight], X.shape[0], axis=0).reshape(X.shape[0], nearestnum))
+        res = np.array(res)
+        return res.reshape(-1, nearestnum)
+
+
+    def transformXY4bignet(self, X, Y, candlist):
+        nearestnum = len(candlist[0])
         Xtrans, Ytrans = [], []
         for i in range(228):
-            a = candlist[i][:nearestnum]
+            a = candlist[i]
             Xtrans.append(X[:, a, :])
             Ytrans.append(Y[:, i])
         Xtrans = np.array(Xtrans).reshape(-1, nearestnum, 12)
         Ytrans = np.array(Ytrans).reshape(-1)
         return Xtrans, Ytrans
 
-    def transformXtest4bignet(self, X, candlist, nearestnum):
+    def transformXtest4bignet(self, X, candlist):
+        nearestnum = len(candlist[0])
         res = []
         for i in range(228):
             a = candlist[i][:nearestnum]
@@ -190,4 +209,4 @@ class PreProcess():
 
 if __name__ == '__main__':
     p = PreProcess()
-    Xtrain, Ytrain, Xdev, Ydev, Xtest = p.generate_data4bignet(0, 14, 50)
+    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(0, 3, 14, 50, return_weight=True)
