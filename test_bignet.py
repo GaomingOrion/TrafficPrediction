@@ -20,8 +20,9 @@ class bigNet():
         self.X_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, self.time_step))
         self.W_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, 1))
         self.y_ph = tf.placeholder(tf.float32, shape=(None,))
-        self.X_norm = tf.layers.batch_normalization(self.X_ph, momentum=0.8)
-        #X_in = tf.multiply(self.W_ph, self.X_norm)
+        self.X_norm = tf.layers.batch_normalization(self.W_ph*self.X_ph, momentum=0.8)
+        # X_in = tf.multiply(self.W_ph, self.X_norm)
+        # X_in = tf.layers.batch_normalization(X_in, momentum=0.8)
         X_in = self.X_norm
         Xconv = tf.layers.conv1d(inputs=tf.transpose(X_in, perm=[0, 2, 1]),
                         filters=self.input_dim+20, kernel_size=3,
@@ -32,6 +33,9 @@ class bigNet():
         Xconv = tf.layers.conv1d(inputs=Xconv,
                         filters=self.input_dim-20, kernel_size=1,
                     kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
+        # Xconv = tf.layers.conv1d(inputs=Xconv,
+        #                 filters=self.input_dim-20, kernel_size=1,
+        #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
         # rnn_in = tf.transpose(Xconv, perm=[0, 2, 1])
         # cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim+20, initializer=tf.orthogonal_initializer())
         #cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=1.0, output_keep_prob=0.5)
@@ -129,11 +133,11 @@ submit_file = 'csv_file/bignet_crnn.csv'
 
 #其他
 model = bigNet()
-model.epochs = 40
+model.epochs = 25
 p = PreProcess()
 
 def main(predictday, i):
-    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(max([0, 36 * i-3]), 36*i+4, predictday, 60, return_weight=True)
+    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(max([0, 36 * i-1]), 36*i+2, predictday, 60, return_weight=True)
     model.input_dim = Xtrain.shape[1]
     model.save_dir = Model_dir + 'predictday%i/%i/' % (predictday, i)
     model.val_mse_min = np.inf
@@ -153,20 +157,20 @@ def main(predictday, i):
     # 写入结果文件
     with open(mse_file, 'a') as f:
         f.write(str(predictday) + ',' + str(i) + '\t' + str(round(10000*mse, 2)) + '\n')
-    # timepoint = {14:15, 17:30, 20:45}[predictday]
-    # with open(submit_file, 'a') as f:
-    #     for k in range(228):
-    #         for j in range(10):
-    #             idx = 10*k + j
-    #             file_idx = 10*j+i
-    #             f.write(str(file_idx) + '_' + str(timepoint) + '_' + str(i) + ',' + str(Yhat[idx]) + '\n')
-    # print('>结果写入完成')
+    timepoint = {14:15, 17:30, 20:45}[predictday]
+    with open(submit_file, 'a') as f:
+        for k in range(228):
+            for j in range(10):
+                idx = 10*k + j
+                file_idx = 8*j+i
+                f.write(str(file_idx) + '_' + str(timepoint) + '_' + str(k) + ',' + str(Yhat[idx]) + '\n')
+    print('>结果写入完成')
     return mse
 
 if __name__ == '__main__':
-    for predictday in [20]:
+    for predictday in [14, 17, 20]:
         mse = []
-        for i in [3]:
+        for i in range(8):
             mse.append(main(predictday, i))
         print(np.mean(mse))
 

@@ -81,7 +81,7 @@ class PreProcess():
         Xtrain = []
         Ytrain = []
         test = np.array(range(34))
-        np.random.seed(1230)
+        #np.random.seed(1200)
         np.random.shuffle(test)
         test = test[:4]
         for k in [x for x in range(34) if x not in test]:
@@ -175,7 +175,7 @@ class PreProcess():
         nearestnum = len(candlist[0])
         res = []
         for i in range(228):
-            weight = np.exp(-np.array(dis_mat[i, candlist[i]])/2000)
+            weight = np.exp(-np.array(dis_mat[i, candlist[i]])/5000)
             res.append(np.repeat([weight], X.shape[0], axis=0).reshape(X.shape[0], nearestnum))
         res = np.array(res)
         return res.reshape(-1, nearestnum, 1)
