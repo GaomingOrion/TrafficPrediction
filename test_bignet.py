@@ -21,24 +21,29 @@ class bigNet():
         self.W_ph = tf.placeholder(tf.float32, shape=(None, self.input_dim, 1))
         self.y_ph = tf.placeholder(tf.float32, shape=(None,))
         self.X_norm = tf.layers.batch_normalization(self.X_ph, momentum=0.8)
-        X_in = tf.multiply(self.W_ph, self.X_norm)
+        #X_in = tf.multiply(self.W_ph, self.X_norm)
+        X_in = self.X_norm
         Xconv = tf.layers.conv1d(inputs=tf.transpose(X_in, perm=[0, 2, 1]),
+                        filters=self.input_dim+20, kernel_size=3,
+                    kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
+        Xconv = tf.layers.conv1d(inputs=Xconv,
                         filters=self.input_dim, kernel_size=3,
                     kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
-        # Xconv = tf.layers.conv1d(inputs=tf.transpose(Xconv, perm=[0, 2, 1]),
-        #                 filters=self.input_dim+20, kernel_size=2,
-        #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
-
-        rnn_in = tf.transpose(Xconv, perm=[0, 2, 1])
-        cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
+        Xconv = tf.layers.conv1d(inputs=Xconv,
+                        filters=self.input_dim-20, kernel_size=1,
+                    kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
+        # rnn_in = tf.transpose(Xconv, perm=[0, 2, 1])
+        # cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim+20, initializer=tf.orthogonal_initializer())
         #cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=1.0, output_keep_prob=0.5)
         #_, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
-        rnn_in2, _ = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32, scope='first')
-        cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
+        # rnn_in2, _ = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32, scope='first')
+        # cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
         #cell2 = tf.contrib.rnn.DropoutWrapper(cell2, input_keep_prob=1.0, output_keep_prob=0.5)
-        _, rnn_out = tf.nn.dynamic_rnn(cell2, rnn_in2, dtype=tf.float32,scope='second')
+        # _, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32, scope='second')
+        self.y_pred = tf.layers.dense(tf.contrib.layers.flatten(Xconv), 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
 
-        self.y_pred = tf.layers.dense(rnn_out.h, 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
+
+        #self.y_pred = tf.layers.dense(rnn_out.h, 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
         self.total_loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))
         optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
         self.train_op = optimizer.minimize(self.total_loss)
@@ -128,7 +133,7 @@ model.epochs = 40
 p = PreProcess()
 
 def main(predictday, i):
-    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(max([0,36 * i-2]), 36*i+3, predictday, 60, return_weight=True)
+    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(max([0, 36 * i-3]), 36*i+4, predictday, 60, return_weight=True)
     model.input_dim = Xtrain.shape[1]
     model.save_dir = Model_dir + 'predictday%i/%i/' % (predictday, i)
     model.val_mse_min = np.inf
@@ -161,7 +166,7 @@ def main(predictday, i):
 if __name__ == '__main__':
     for predictday in [20]:
         mse = []
-        for i in [2]:
+        for i in [3]:
             mse.append(main(predictday, i))
         print(np.mean(mse))
 
