@@ -133,11 +133,11 @@ submit_file = 'csv_file/bignet_crnn.csv'
 
 #其他
 model = bigNet()
-model.epochs = 25
+model.epochs = 30
 p = PreProcess()
 
 def main(predictday, i):
-    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(max([0, 36 * i-1]), 36*i+2, predictday, 60, return_weight=True)
+    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(i, max([0, 36 * i-3]), 36*i+4, predictday, 60, return_weight=True)
     model.input_dim = Xtrain.shape[1]
     model.save_dir = Model_dir + 'predictday%i/%i/' % (predictday, i)
     model.val_mse_min = np.inf

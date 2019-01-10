@@ -76,7 +76,7 @@ class PreProcess():
         Xtest = np.array(Xtest)
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
-    def readdata4bignet(self, start, end, predictday):
+    def readdata4bignet(self, order, start, end, predictday):
         # 读取训练数据
         Xtrain = []
         Ytrain = []
@@ -100,14 +100,14 @@ class PreProcess():
             df = pd.read_csv('data/train/%i.csv' % k, encoding='utf-8', names=list(range(228)))
             df = np.array(df).transpose()
             df = self.data_tf(df)
-            Xdev += [df[:, i:(i + 12)] for i in [start]]
-            Ydev += [df[:, i + predictday] for i in [start]]
+            Xdev += [df[:, i:(i + 12)] for i in [36*order]]
+            Ydev += [df[:, i + predictday] for i in [36*order]]
         Xdev, Ydev = np.array(Xdev), np.array(Ydev)
         print('验证数据shape', Xdev.shape, Ydev.shape)
 
         # 读取test数据集，用来之后提交预测
         Xtest = []
-        for k in range(start//36, 80, 8):
+        for k in range(order, 80, 8):
             df = pd.read_csv('data/test/%i.csv' % k, encoding='utf-8', names=list(range(228)))
             df = np.array(df).transpose()
             df = self.data_tf(df)
