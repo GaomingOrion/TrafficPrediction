@@ -154,10 +154,10 @@ class PreProcess():
         Xtest = np.array(Xtest)
         return Xtrain, Ytrain, Xdev, Ydev, Xtest
 
-    def generate_data4bignet(self, start, end, predictday, nearestnum=50, return_weight=False):
+    def generate_data4bignet(self, order, start, end, predictday, nearestnum=50, return_weight=False):
         dis_mat = np.array(pd.read_csv('data/distance.csv', encoding='utf-8', names=list(range(228))))
         candlist = self.select_k_nearest(nearestnum)
-        Xtrain, Ytrain, Xdev, Ydev, Xtest = self.readdata4bignet(start, end, predictday)
+        Xtrain, Ytrain, Xdev, Ydev, Xtest = self.readdata4bignet(order, start, end, predictday)
         if return_weight:
             Wtrain = self.getWeight(Xtrain, candlist, dis_mat)
             Wdev = self.getWeight(Xdev, candlist, dis_mat)
