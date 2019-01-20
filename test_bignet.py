@@ -24,31 +24,34 @@ class bigNet():
         # X_in = tf.multiply(self.W_ph, self.X_norm)
         # X_in = tf.layers.batch_normalization(X_in, momentum=0.8)
         X_in = self.X_norm
-        Xconv = tf.layers.conv1d(inputs=tf.transpose(X_in, perm=[0, 2, 1]),
-                        filters=self.input_dim+20, kernel_size=3,
-                    kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
-        Xconv = tf.layers.conv1d(inputs=Xconv,
-                        filters=self.input_dim, kernel_size=3,
-                    kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
-        Xconv = tf.layers.conv1d(inputs=Xconv,
-                        filters=self.input_dim-20, kernel_size=1,
-                    kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
+        # Xconv = tf.layers.conv1d(inputs=tf.transpose(X_in, perm=[0, 2, 1]),
+        #                 filters=self.input_dim+20, kernel_size=3,
+        #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
+        # Xconv = tf.layers.conv1d(inputs=Xconv,
+        #                 filters=self.input_dim, kernel_size=3,
+        #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
         # Xconv = tf.layers.conv1d(inputs=Xconv,
         #                 filters=self.input_dim-20, kernel_size=1,
         #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
-        # rnn_in = tf.transpose(Xconv, perm=[0, 2, 1])
-        # cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim+20, initializer=tf.orthogonal_initializer())
+        # Xconv = tf.layers.conv1d(inputs=Xconv,
+        #                 filters=self.input_dim-20, kernel_size=1,
+        #             kernel_initializer=tf.contrib.keras.initializers.he_normal(), activation=tf.nn.relu)
+        rnn_in = tf.transpose(X_in, perm=[0, 2, 1])
+        cell = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim+20, initializer=tf.orthogonal_initializer())
         #cell = tf.contrib.rnn.DropoutWrapper(cell, input_keep_prob=1.0, output_keep_prob=0.5)
         #_, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32)
         # rnn_in2, _ = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32, scope='first')
         # cell2 = tf.nn.rnn_cell.LSTMCell(num_units=self.input_dim, initializer=tf.orthogonal_initializer())
-        #cell2 = tf.contrib.rnn.DropoutWrapper(cell2, input_keep_prob=1.0, output_keep_prob=0.5)
-        # _, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32, scope='second')
-        self.y_pred = tf.layers.dense(tf.contrib.layers.flatten(Xconv), 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        # cell2 = tf.contrib.rnn.DropoutWrapper(cell2, input_keep_prob=1.0, output_keep_prob=0.5)
+        _, rnn_out = tf.nn.dynamic_rnn(cell, rnn_in, dtype=tf.float32, scope='second')
+        # self.y_pred = tf.layers.dense(tf.contrib.layers.flatten(X_in), 1, kernel_initializer=tf.contrib.layers.xavier_initializer(),
+        #                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1.0))
 
 
-        #self.y_pred = tf.layers.dense(rnn_out.h, 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        self.y_pred = tf.layers.dense(rnn_out.h, 1, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        reg_losses = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         self.total_loss = tf.reduce_mean(tf.squared_difference(tf.reshape(self.y_ph, (-1, 1)), self.y_pred))
+        #        +1e-3*reg_losses
         optimizer = tf.train.AdamOptimizer(learning_rate=1e-3)
         self.train_op = optimizer.minimize(self.total_loss)
 
@@ -117,7 +120,7 @@ if use_cpu:
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # 模型保存路径
-Model_dir = 'bigNet/'
+Model_dir = 'LstmModel/'
 if not os.path.exists(Model_dir):
     os.mkdir(Model_dir)
 for predictday in [14, 17, 20]:
@@ -129,15 +132,15 @@ for predictday in [14, 17, 20]:
 
 # 结果文件路径
 mse_file = 'csv_file/bignet_mse.txt'
-submit_file = 'csv_file/bignet_crnn.csv'
+submit_file = 'csv_file/lstm.csv'
 
 #其他
 model = bigNet()
-model.epochs = 30
+model.epochs = 25
 p = PreProcess()
 
 def main(predictday, i):
-    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(i, max([0, 36 * i-3]), 36*i+4, predictday, 60, return_weight=True)
+    Xtrain, Wtrain, Ytrain, Xdev, Wdev, Ydev, Xtest, Wtest = p.generate_data4bignet(i, max([0, 36 * i-1]), 36*i+2, predictday, 60, return_weight=True)
     model.input_dim = Xtrain.shape[1]
     model.save_dir = Model_dir + 'predictday%i/%i/' % (predictday, i)
     model.val_mse_min = np.inf
@@ -170,7 +173,7 @@ def main(predictday, i):
 if __name__ == '__main__':
     for predictday in [14, 17, 20]:
         mse = []
-        for i in range(8):
+        for i in range(0, 8):
             mse.append(main(predictday, i))
         print(np.mean(mse))
 
